@@ -1,0 +1,223 @@
+{
+  "name": "event-auditor",
+  "displayName": "Event Auditor",
+  "description": "Audits a Copilot session: prompts, real LLM token usage, tool calls Copilot makes, and test runs.",
+  "version": "0.0.1",
+  "publisher": "local-dev",
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": ["Chat", "Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "auditor.assistant",
+        "name": "auditor",
+        "description": "Chat here to log prompts and LLM calls made by the @auditor participant with real token counts.",
+        "isSticky": true
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "auditor-run-tests",
+        "displayName": "Run Tests (Audited)",
+        "modelDescription": "Runs the project's test suite (npm test) and reports pass/fail counts. Use this when the user asks to run tests or verify their code works.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "runTests",
+        "icon": "$(beaker)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "auditor-terminal",
+        "displayName": "Run Shell Command (Audited)",
+        "modelDescription": "Runs a shell command in the current workspace folder and returns stdout/stderr. Use this when the user asks to run a command, install a package, or inspect the filesystem.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "terminal",
+        "icon": "$(terminal)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "The shell command to execute, e.g. 'ls -la' or 'npm install lodash'"
+            }
+          },
+          "required": ["command"]
+        }
+      },
+      {
+        "name": "auditor-regex-search",
+        "displayName": "Regex Search (Audited)",
+        "modelDescription": "Searches workspace files with a regular expression and returns matching lines. Use this for regex-based searches instead of running a shell search command.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "regexSearch",
+        "icon": "$(search)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "type": "string",
+              "description": "JavaScript regular expression pattern"
+            },
+            "glob": {
+              "type": "string",
+              "description": "Workspace file glob, for example **/*.js"
+            },
+            "flags": {
+              "type": "string",
+              "description": "Optional JavaScript regex flags, for example i or im"
+            },
+            "maxResults": {
+              "type": "number",
+              "description": "Maximum number of matching lines to return"
+            }
+          },
+          "required": ["pattern", "glob"]
+        }
+      },
+      {
+        "name": "auditor-edit-file",
+        "displayName": "Edit File (Audited)",
+        "modelDescription": "Edits one existing workspace file by replacing an exact text match. Use this when the user asks to modify code or documentation.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "editFile",
+         "icon": "$(rename)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "type": "string",
+              "description": "Workspace-relative path of the existing file"
+            },
+            "oldText": {
+              "type": "string",
+              "description": "Exact text to replace; it must occur exactly once"
+            },
+            "newText": {
+              "type": "string",
+              "description": "Replacement text"
+            }
+          },
+          "required": ["filePath", "oldText", "newText"]
+        }
+      },
+      {
+        "name": "auditor-create-file",
+        "displayName": "Create File (Audited)",
+        "modelDescription": "Creates a new file inside the workspace. It refuses to overwrite an existing file. Use this when the user asks to add a file.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "createFile",
+        "icon": "$(new-file)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "type": "string",
+              "description": "Workspace-relative path for the new file"
+            },
+            "content": {
+              "type": "string",
+              "description": "Initial file contents"
+            }
+          },
+          "required": ["filePath", "content"]
+        }
+      },
+      {
+        "name": "auditor-read-file",
+        "displayName": "Read File (Audited)",
+        "modelDescription": "Reads the UTF-8 contents of an existing workspace file.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "readFile",
+        "icon": "$(file-text)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "type": "string",
+              "description": "Workspace-relative path of the file to read"
+            }
+          },
+          "required": ["filePath"]
+        }
+      },
+      {
+        "name": "auditor-delete-file",
+        "displayName": "Delete File (Audited)",
+        "modelDescription": "Deletes one existing workspace file after user confirmation.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "deleteFile",
+        "icon": "$(trash)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "type": "string",
+              "description": "Workspace-relative path of the file to delete"
+            }
+          },
+          "required": ["filePath"]
+        }
+      },
+      {
+        "name": "auditor-rename-file",
+        "displayName": "Rename File (Audited)",
+        "modelDescription": "Renames one workspace file after user confirmation and refuses to overwrite the destination.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "renameFile",
+        "icon": "$( ಸಂಕ)" ,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "oldFilePath": {
+              "type": "string",
+              "description": "Current workspace-relative file path"
+            },
+            "newFilePath": {
+              "type": "string",
+              "description": "New workspace-relative file path"
+            }
+          },
+          "required": ["oldFilePath", "newFilePath"]
+        }
+      },
+      {
+        "name": "auditor-skill-log-health",
+        "displayName": "Skill: Check Audit Log",
+        "modelDescription": "Checks the current audit log and reports event counts and whether file changes and skill calls are being recorded.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "checkAuditLog",
+        "icon": "$(pulse)",
+        "inputSchema": { "type": "object", "properties": {} }
+      },
+      {
+        "name": "auditor-skill-file-summary",
+        "displayName": "Skill: Summarize File Changes",
+        "modelDescription": "Reports which workspace files changed and the recorded change details from this audit session.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "summarizeFileChanges",
+        "icon": "$(diff)",
+        "inputSchema": { "type": "object", "properties": {} }
+      },
+      {
+        "name": "auditor-skill-session-report",
+        "displayName": "Skill: Render Session Report",
+        "modelDescription": "Renders the complete current audit report, including tools, files, skills, tests, and errors.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "renderAuditReport",
+        "icon": "$(report)",
+        "inputSchema": { "type": "object", "properties": {} }
+      }
+    ],
+    "commands": [
+      { "command": "auditor.endSession", "title": "Event Auditor: End Session" },
+      { "command": "auditor.showReport", "title": "Event Auditor: Show Report" },
+      { "command": "auditor.viewLog", "title": "Event Auditor: Open Raw Log" }
+    ]
+  }
+}
