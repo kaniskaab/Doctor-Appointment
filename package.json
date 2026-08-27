@@ -107,6 +107,28 @@
         }
       },
       {
+        "name": "auditor-append-file",
+        "displayName": "Append to File (Audited)",
+        "modelDescription": "Appends content to an existing workspace file without requiring an oldText match. Use this when the user asks to add content at the end of a file.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "appendFile",
+        "icon": "$(diff-added)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "type": "string",
+              "description": "Workspace-relative path of the existing file"
+            },
+            "content": {
+              "type": "string",
+              "description": "Content to append to the end of the file"
+            }
+          },
+          "required": ["filePath", "content"]
+        }
+      },
+      {
         "name": "auditor-create-file",
         "displayName": "Create File (Audited)",
         "modelDescription": "Creates a new file inside the workspace. It refuses to overwrite an existing file. Use this when the user asks to add a file.",

@@ -105,6 +105,27 @@ function editWorkspaceFile({ filePath, oldText, newText }) {
   };
 }
 
+function appendToWorkspaceFile({ filePath, content = '' }) {
+  const target = workspaceFilePath(filePath);
+  if (typeof content !== 'string') throw new Error('content must be a string.');
+  if (!fs.existsSync(target)) throw new Error(`File does not exist: ${filePath}`);
+
+  const original = fs.readFileSync(target, 'utf8');
+  const prefix = original.length && !original.endsWith('\n') ? '\n' : '';
+  const appended = prefix + content;
+  fs.appendFileSync(target, appended, 'utf8');
+  return {
+    target,
+    changes: [{
+      range: null,
+      addedChars: appended.length,
+      removedChars: 0,
+      addedLines: appended.split(/\r?\n/).length - 1,
+      removedLines: 0,
+    }],
+  };
+}
+
 function createWorkspaceFile({ filePath, content = '' }) {
   const target = workspaceFilePath(filePath);
   if (fs.existsSync(target)) throw new Error(`File already exists: ${filePath}`);
@@ -195,7 +216,7 @@ function parseTestOutput(output) {
   return { passed: 0, failed: 0 };
 }
 
-// test
+async function invokeAuditedTool(toolName, handler, { skillName } = {}) {
   const a = ensureAuditor();
   const callId = crypto.randomUUID();
   const start = Date.now();
@@ -248,6 +269,27 @@ function registerSkill(context, toolName, skillName, handler) {
       },
     })
   );
+}
+
+function conversationMessages(chatContext, prompt) {
+  const messages = [];
+  for (const turn of chatContext.history || []) {
+    if (typeof turn.prompt === 'string') {
+      messages.push(vscode.LanguageModelChatMessage.User(turn.prompt));
+      continue;
+    }
+
+    if (Array.isArray(turn.response)) {
+      const responseText = turn.response
+        .filter((part) => part instanceof vscode.ChatResponseMarkdownPart)
+        .map((part) => part.value && typeof part.value === 'object' ? part.value.value : part.value)
+        .filter((value) => typeof value === 'string')
+        .join('');
+      if (responseText) messages.push(vscode.LanguageModelChatMessage.Assistant(responseText));
+    }
+  }
+  messages.push(vscode.LanguageModelChatMessage.User(prompt));
+  return messages;
 }
 
 function activate(context) {
@@ -341,7 +383,7 @@ function activate(context) {
         }
       }
 
-      const messages = [vscode.LanguageModelChatMessage.User(request.prompt)];
+      const messages = conversationMessages(chatContext, request.prompt);
       const start = Date.now();
       let fullText = '';
       let requestError = null;
@@ -489,6 +531,31 @@ function activate(context) {
         return {
           value: new vscode.LanguageModelToolResult([
             new vscode.LanguageModelTextPart(`Edited ${input.filePath}.`),
+          ]),
+        };
+      }),
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.lm.registerTool('auditor-append-file', {
+      prepareInvocation: async (options) => ({
+        confirmationMessages: {
+          title: 'Append to workspace file?',
+          message: new vscode.MarkdownString(`Copilot wants to append to \`${options.input && options.input.filePath}\`.`),
+        },
+      }),
+      invoke: async (options) => invokeAuditedTool('auditor-append-file', async () => {
+        const input = options.input || {};
+        const result = appendToWorkspaceFile(input);
+        ensureAuditor().fileChange({
+          filePath: input.filePath,
+          changes: result.changes,
+          reason: 'language-model-append',
+        });
+        return {
+          value: new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(`Appended to ${input.filePath}.`),
           ]),
         };
       }),
