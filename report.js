@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { EventType } = require('./helpers/eventTypes');
 
 function loadEvents(file) {
   const lines = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
@@ -8,7 +9,7 @@ function loadEvents(file) {
       events.push(JSON.parse(line));
     } catch (err) {
       events.push({
-        event_type: 'ERROR',
+        event_type: EventType.ERROR,
         source: 'LOG_PARSE',
         message: `Invalid JSON at line ${index + 1}: ${err.message}`,
         timestamp: null,
@@ -44,16 +45,16 @@ function summarize(events) {
 
   for (const ev of events) {
     switch (ev.event_type) {
-      case 'SESSION_STARTED':
+      case EventType.SESSION_STARTED:
         summary.startedAt = ev.timestamp;
         break;
-      case 'SESSION_ENDED':
+      case EventType.SESSION_ENDED:
         summary.endedAt = ev.timestamp;
         break;
-      case 'USER_PROMPT':
+      case EventType.USER_PROMPT:
         summary.prompts += 1;
         break;
-      case 'LLM_CALL':
+      case EventType.LLM_CALL:
         llmCallIndex += 1;
         summary.llmCalls += 1;
         summary.inputTokens += ev.input_tokens || 0;
@@ -64,7 +65,7 @@ function summarize(events) {
         }
         lastModel = ev.model || lastModel;
         break;
-      case 'AGENT_CALL':
+      case EventType.AGENT_CALL:
         summary.agentCalls.push({
           agentName: ev.agent_name,
           success: ev.success !== false,
@@ -72,7 +73,7 @@ function summarize(events) {
           timestamp: ev.timestamp,
         });
         break;
-      case 'AGENT_STARTED':
+      case EventType.AGENT_STARTED:
         summary.agentCalls.push({
           eventId: ev.event_id,
           agentName: ev.agent_name,
@@ -82,26 +83,26 @@ function summarize(events) {
           timestamp: ev.timestamp,
         });
         break;
-      case 'AGENT_COMPLETED':
-      case 'AGENT_FAILED': {
+      case EventType.AGENT_COMPLETED:
+      case EventType.AGENT_FAILED: {
         const execution = summary.agentCalls.find((agent) => agent.eventId === ev.parent_event_id);
         if (execution) {
-          execution.success = ev.event_type === 'AGENT_COMPLETED';
+          execution.success = ev.event_type === EventType.AGENT_COMPLETED;
           execution.status = execution.success ? 'completed' : 'failed';
           execution.latencyMs = ev.latency_ms || 0;
         } else {
           summary.agentCalls.push({
             eventId: ev.parent_event_id || ev.event_id,
             agentName: ev.agent_name,
-            success: ev.event_type === 'AGENT_COMPLETED',
-            status: ev.event_type === 'AGENT_COMPLETED' ? 'completed' : 'failed',
+            success: ev.event_type === EventType.AGENT_COMPLETED,
+            status: ev.event_type === EventType.AGENT_COMPLETED ? 'completed' : 'failed',
             latencyMs: ev.latency_ms || 0,
             timestamp: ev.timestamp,
           });
         }
         break;
       }
-      case 'TOOL_CALL': {
+      case EventType.TOOL_CALL: {
         const t = summary.toolCalls[ev.tool_name] || { count: 0, failed: 0, totalLatencyMs: 0 };
         t.count += 1;
         if (ev.success === false) t.failed += 1;
@@ -109,7 +110,7 @@ function summarize(events) {
         summary.toolCalls[ev.tool_name] = t;
         break;
       }
-      case 'FILE_CHANGE':
+      case EventType.FILE_CHANGE:
         summary.fileChanges.push({
           filePath: ev.file_path,
           changeCount: ev.change_count || 0,
@@ -121,7 +122,7 @@ function summarize(events) {
           summary.filesModified.push(ev.file_path);
         }
         break;
-      case 'SKILL_CALL':
+      case EventType.SKILL_CALL:
         summary.skillCalls.push({
           skillName: ev.skill_name,
           source: ev.skill_source || 'explicit',
@@ -130,10 +131,10 @@ function summarize(events) {
           timestamp: ev.timestamp,
         });
         break;
-      case 'TEST_RUN':
+      case EventType.TEST_RUN:
         summary.testRuns.push({ passed: ev.passed, failed: ev.failed, suite: ev.suite || null });
         break;
-      case 'ERROR':
+      case EventType.ERROR:
         summary.errors.push({ source: ev.source, message: ev.message, timestamp: ev.timestamp });
         break;
       default:

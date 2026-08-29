@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { EventType } = require('./helpers/eventTypes');
 
 class EventAuditor {
   constructor(opts = {}) {
@@ -32,16 +33,16 @@ class EventAuditor {
   }
 
   sessionStarted(meta = {}) {
-    return this._write({ event_type: 'SESSION_STARTED', ...meta });
+    return this._write({ event_type: EventType.SESSION_STARTED, ...meta });
   }
 
   userPrompt(promptSummary = '') {
-    return this._write({ event_type: 'USER_PROMPT', prompt_summary: promptSummary });
+    return this._write({ event_type: EventType.USER_PROMPT, prompt_summary: promptSummary });
   }
 
   agentStarted({ agentName, promptSummary = '' } = {}) {
     const record = this._write({
-      event_type: 'AGENT_STARTED',
+      event_type: EventType.AGENT_STARTED,
       agent_name: agentName,
       prompt_summary: promptSummary,
     });
@@ -51,7 +52,7 @@ class EventAuditor {
 
   agentCompleted({ agentName, parentEventId, latencyMs } = {}) {
     const record = this._write({
-      event_type: 'AGENT_COMPLETED',
+      event_type: EventType.AGENT_COMPLETED,
       agent_name: agentName,
       parent_event_id: parentEventId,
       success: true,
@@ -63,7 +64,7 @@ class EventAuditor {
 
   agentFailed({ agentName, parentEventId, latencyMs, error } = {}) {
     const record = this._write({
-      event_type: 'AGENT_FAILED',
+      event_type: EventType.AGENT_FAILED,
       agent_name: agentName,
       parent_event_id: parentEventId,
       success: false,
@@ -76,7 +77,7 @@ class EventAuditor {
 
   llmCall({ model, inputTokens, outputTokens, latencyMs, parentEventId } = {}) {
     return this._write({
-      event_type: 'LLM_CALL',
+      event_type: EventType.LLM_CALL,
       model,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
@@ -87,7 +88,7 @@ class EventAuditor {
 
   agentCall({ agentName, promptSummary = '', success = true, latencyMs } = {}) {
     return this._write({
-      event_type: 'AGENT_CALL',
+      event_type: EventType.AGENT_CALL,
       agent_name: agentName,
       prompt_summary: promptSummary,
       success,
@@ -97,7 +98,7 @@ class EventAuditor {
 
   toolCall({ toolName, latencyMs, success = true, callId = null, kind = 'tool', parentEventId } = {}) {
     return this._write({
-      event_type: 'TOOL_CALL',
+      event_type: EventType.TOOL_CALL,
       tool_name: toolName,
       latency_ms: latencyMs,
       success,
@@ -109,7 +110,7 @@ class EventAuditor {
 
   fileChange({ filePath, changes = [], reason = null } = {}) {
     return this._write({
-      event_type: 'FILE_CHANGE',
+      event_type: EventType.FILE_CHANGE,
       file_path: filePath,
       change_count: changes.length,
       changes,
@@ -119,7 +120,7 @@ class EventAuditor {
 
   skillCall({ skillName, source = 'explicit', success = true, info = null, callId = null, toolName = null, parentEventId } = {}) {
     return this._write({
-      event_type: 'SKILL_CALL',
+      event_type: EventType.SKILL_CALL,
       skill_name: skillName,
       skill_source: source,
       success,
@@ -132,7 +133,7 @@ class EventAuditor {
 
   testRun({ passed = 0, failed = 0, suite = null } = {}) {
     return this._write({
-      event_type: 'TEST_RUN',
+      event_type: EventType.TEST_RUN,
       passed,
       failed,
       ...(suite ? { suite } : {}),
@@ -140,11 +141,11 @@ class EventAuditor {
   }
 
   error({ source, message } = {}) {
-    return this._write({ event_type: 'ERROR', source, message });
+    return this._write({ event_type: EventType.ERROR, source, message });
   }
 
   sessionEnded(meta = {}) {
-    return this._write({ event_type: 'SESSION_ENDED', ...meta });
+    return this._write({ event_type: EventType.SESSION_ENDED, ...meta });
   }
 }
 
